@@ -1,0 +1,25 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+      notify:
+        - Start Docker
+
+    - name: Pull Docker Image
+      command: docker pull your-dockerhub-username/javawebapp:{{ build_number }}
+
+    - name: Run Docker Container
+      command: docker run -d -p 8555:8555 your-dockerhub-username/javawebapp:{{ build_number }}
+      args:
+        creates: /var/run/docker.sock
+
+  handlers:
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+

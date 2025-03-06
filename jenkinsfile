@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "saicharan12121/devops-java2"
+        BUILD_NUMBER = "${env.BUILD_NUMBER}"
+        SONAR_URL = 'http://34.27.111.131:9000'
+        SONAR_TOKEN = credentials('sonar-token')
+    }
+
+    tools {
+        maven 'maven' 
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/Saicharan619/DEVOPS-JAVA2.git'
+            }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh '''
+                    mvn sonar:sonar \
+                        -Dsonar.projectKey=DEVOPS-JAVA2 \
+                        -Dsonar.host.url=${SONAR_URL} \
+                        -Dsonar.login=${SONAR_TOKEN}
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Docker Build and Push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh '''
+                    docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                    docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
+                    echo $PASSWORD | docker login -u $USERNAME --password-stdin
+                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    docker push ${IMAGE_NAME}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Ansible Deployment') {
+            steps {
+                sh '''
+                ansible-playbook ansible.yml -e build_number=${BUILD_NUMBER}
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Application successfully deployed!"
+        }
+        failure {
+            echo "Build failed!"
+        }
+    }
+}
+
