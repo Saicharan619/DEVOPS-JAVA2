@@ -13,11 +13,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/Saicharan619/DEVOPS-JAVA2.git'
-            }
-        }
 
         stage('Build with Maven') {
             steps {
