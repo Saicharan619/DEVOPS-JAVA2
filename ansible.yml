@@ -2,10 +2,18 @@
 - hosts: all
   become: yes
   tasks:
-    - name: Remove Podman
+    - name: Remove Podman completely
       yum:
         name: podman-docker
         state: absent
+      ignore_errors: yes
+
+    - name: Clean Yum Cache
+      command: yum clean all
+      ignore_errors: yes
+
+    - name: Remove remaining Podman packages
+      command: yum remove -y podman*
       ignore_errors: yes
 
     - name: Install Docker
@@ -15,16 +23,16 @@
       notify:
         - Start Docker
 
-    - name: Stop Running Container (if any)
-      command: docker stop $(docker ps -q --filter "ancestor=saicharan12121/devops-java2:{{ build_number }}")
-      ignore_errors: yes
-
-    - name: Remove Old Containers
-      command: docker rm $(docker ps -aq --filter "ancestor=saicharan12121/devops-java2:{{ build_number }}")
-      ignore_errors: yes
-
     - name: Pull Docker Image
       command: docker pull saicharan12121/devops-java2:{{ build_number }}
+
+    - name: Stop existing Docker container
+      command: docker stop $(docker ps -q --filter ancestor=saicharan12121/devops-java2:{{ build_number }})
+      ignore_errors: yes
+
+    - name: Remove existing Docker container
+      command: docker rm $(docker ps -aq --filter ancestor=saicharan12121/devops-java2:{{ build_number }})
+      ignore_errors: yes
 
     - name: Run Docker Container
       command: docker run -d -p 8555:8555 saicharan12121/devops-java2:{{ build_number }}
