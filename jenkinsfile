@@ -14,11 +14,14 @@ pipeline {
 
     stages {
 
-        stage('Build with Maven') {
-            steps {
-                sh 'mvn clean package'
-            }
-        }
+     
+stage('Build with Maven') {
+    steps {
+        echo 'Building with Maven...'
+        sh 'mvn clean package'
+        sh 'ls -la target/'  // This line will list all files in target folder
+    }
+}
 
         stage('SonarQube Analysis') {
             steps {
